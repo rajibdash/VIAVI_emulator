@@ -92,6 +92,26 @@ In this example, **UE 1** (served primarily by Cell A) and **UE 2** (served prim
 
 ### 4.2 Frequency-Domain PRB Allocation Grid (1 Slot)
 
+The rows below use a **single shared carrier and the same slot**. Read left to right as frequency increases: the overlap is the set of PRB indices where both UEs transmit simultaneously—not a separate frequency band between the cells.
+
+```text
+                         SAME CARRIER + SAME SLOT
+Frequency increases  ----------------------------------------------------->
+
+PRB index             0   1   2   3  |  4   5   6   7  |  8   9  10  11
+                                      |<-- OVERLAP -->|
+UE 1 (Cell A / TRP 1) [UE1 UE1 UE1 UE1]|[UE1 UE1 UE1 UE1]|[ .   .   .   . ]
+UE 2 (Cell B / TRP 2) [ .   .   .   . ]|[UE2 UE2 UE2 UE2]|[UE2 UE2 UE2 UE2]
+                                      |  same PRBs,     |
+                                      |  same time      |
+
+TRP 1 receives a mixture of UE1 + UE2 on PRBs 4-7; TRP 2 does too.
+Both TRPs forward their received IQ to the centralized BBU/O-DU for joint
+processing, which separates the streams using channel estimates and DMRS.
+```
+
+The detailed allocation per PRB is shown below. UE 1 uses PRBs 0–7; UE 2 uses PRBs 4–11, so PRBs 4–7 are allocated to both in the same slot.
+
 ```text
 PRB Index |  Cell A Allocation (UE 1)  |  Cell B Allocation (UE 2)  |  UL CoMP Processing Mode
 ----------+----------------------------+----------------------------+-----------------------------------
@@ -181,7 +201,7 @@ NR PRB Index |   Cell 1 Allocation (UE 1)    |   Cell 2 Allocation (UE 2)    |  
              | • Virtual DMRS ID: 500        | • Virtual DMRS ID: 500        | • Joint MMSE-IRC separates UE 1 & 2
              | • Data Scrambling ID: 500     | • Data Scrambling ID: 500     | • Requires < 2.34 μs delay delta
 =============+===============================+===============================+=====================================
-PRB 100 - 149| (          Unused           ) | [       UE 2 PUSCH          ] | Single-TRP Reception (Cell 2)
+ PRB 100 - 149| (          Unused           ) | [       UE 2 PUSCH          ] | Single-TRP Reception (Cell 2)
 ```
 
 ### 5.3 Critical NR FR1 Parameters for VIAVI TM500 / E500 Verification
