@@ -217,4 +217,19 @@ UE 2 (served by Cell B) [ .   .   .   . ]|[UE2 UE2 UE2 UE2]|[UE2 UE2 UE2 UE2]
 TRP 1 and TRP 2 receive UE 1 + UE 2 on PRBs 4–7.
 They forward their received signals to the centralized BBU/O-DU for joint
 processing.
+
 ```
+
+## 7. VIAVI PHY & RRC Troubleshooting Matrix
+
+Use the matrix below to map observed VIAVI TM500/E500 log counters and symptoms directly to root causes, 3GPP Information Elements (IEs), and corrective actions.
+
+| VIAVI Log Symptom / Counter | Likely Root Cause | Target 3GPP IE / Parameter | Corrective Action |
+| :--- | :--- | :--- | :--- |
+| **PUSCH CRC Failure / High BLER** isolated strictly to overlapping PRBs (e.g., PRBs 50–99); non-overlapping PRBs pass cleanly. | DMRS scrambling sequence collision because UEs default to their respective serving cell PCIs instead of a shared Virtual Cell ID. | `DMRS-UplinkConfig` (`scramblingID0`, `scramblingID1`) & `PUSCH-Config` (`dataScramblingIdentityPUSCH`) | Configure identical virtual scrambling IDs (e.g., `500`) for both co-scheduled UEs in RRC Reconfiguration and verify TM500 PHY logs apply the override. |
+| **Low DMRS SINR / Channel Estimation Error** despite high simulated SNR and matched Virtual Cell IDs. | Non-orthogonal DMRS antenna ports assigned to overlapping UEs (same CDM group and same OCC). | `DCI Format 0_1` / `0_2` (`Antenna ports` field) & `dmrs-Type` | Assign ports from distinct CDM groups (e.g., Port `1000` in CDM Group 0 for UE 1; Port `1002` in CDM Group 1 for UE 2). |
+| **Inter-Symbol Interference (ISI) / Phase Ramp** across PRBs in 30 kHz SCS NR FR1 tests. | Differential propagation delay between UE→TRP1 and UE→TRP2 exceeds the 30 kHz Cyclic Prefix (~2.34 μs). | VIAVI Channel Emulator Delay Profile & MAC `Timing Advance Command` | Reduce inter-TRP path delay delta in the VIAVI fading/channel model to `< 2.0 μs` (~600 m) and align UL Timing Advance groups. |
+| **Near-Far Capture Effect:** Stronger cell-edge UE decodes at 0% BLER while weaker co-scheduled UE hits ~100% BLER. | Uplink receive power imbalance exceeds O-DU/BBU ADC or MMSE-IRC dynamic range (> 15 dB delta). | `PUSCH-PowerControl` ($P_0$, $\alpha$) & `DCI Format 0_1` (`TPC command`) | Adjust fractional path-loss compensation ($\alpha$) or closed-loop TPC targets so both UEs arrive at both TRPs within 10–15 dB Rx PSD. |
+| **PHR Reports 0 dB / Negative Values** (`PHR <= 0 dB`) accompanied by rising BLER at cell edge. | UE hits maximum transmit power ($P_{\text{CMAX}}$) and cannot honor gNB closed-loop power-up TPC commands. | `p-Max` in `ServingCellConfigCommon` & VIAVI RF Tx power calibration | Reduce simulated path loss in the overlap zone or verify VIAVI RF front-end attenuation/gain calibration tables. |
+| **eCPRI U-Plane Packet Drop / Truncated PRBs** in O-RAN 7.2x disaggregated test setups. | Misaligned PRB indexing or missing non-contiguous PRB support on the fronthaul interface. | eCPRI Section Type 1 (`startPrbc`, `numPrbc`) & VIAVI Fronthaul License | Verify `startPrbc` alignment across Cell 1 and Cell 2 IQ streams and ensure VIAVI non-contiguous PRB/multi-section modules are enabled. |
+| **Scheduler Fails to Trigger UL CoMP JR** (keeps UEs on non-overlapping PRBs). | Stale or misaligned SRS CSI measurements preventing the gNB from pairing UEs spatially. | `SRS-Config` (`resourceMapping`, `transmissionComb`, `periodicityAndOffset`) | Align TM500 SRS comb offset and periodicity with the gNB's cross-cell SRS measurement window. |
