@@ -92,26 +92,6 @@ In this example, **UE 1** (served primarily by Cell A) and **UE 2** (served prim
 
 ### 4.2 Frequency-Domain PRB Allocation Grid (1 Slot)
 
-The rows below use a **single shared carrier and the same slot**. Read left to right as frequency increases: the overlap is the set of PRB indices where both UEs transmit simultaneously—not a separate frequency band between the cells.
-
-```text
-                         SAME CARRIER + SAME SLOT
-Frequency increases  ----------------------------------------------------->
-
-PRB index             0   1   2   3  |  4   5   6   7  |  8   9  10  11
-                                      |<-- OVERLAP -->|
-UE 1 (Cell A / TRP 1) [UE1 UE1 UE1 UE1]|[UE1 UE1 UE1 UE1]|[ .   .   .   . ]
-UE 2 (Cell B / TRP 2) [ .   .   .   . ]|[UE2 UE2 UE2 UE2]|[UE2 UE2 UE2 UE2]
-                                      |  same PRBs,     |
-                                      |  same time      |
-
-TRP 1 receives a mixture of UE1 + UE2 on PRBs 4-7; TRP 2 does too.
-Both TRPs forward their received IQ to the centralized BBU/O-DU for joint
-processing, which separates the streams using channel estimates and DMRS.
-```
-
-The detailed allocation per PRB is shown below. UE 1 uses PRBs 0–7; UE 2 uses PRBs 4–11, so PRBs 4–7 are allocated to both in the same slot.
-
 ```text
 PRB Index |  Cell A Allocation (UE 1)  |  Cell B Allocation (UE 2)  |  UL CoMP Processing Mode
 ----------+----------------------------+----------------------------+-----------------------------------
@@ -216,3 +196,25 @@ NR PRB Index |   Cell 1 Allocation (UE 1)    |   Cell 2 Allocation (UE 2)    |  
   * **What to check in VIAVI Channel Emulator:** The differential propagation delay between $\text{UE 1} \rightarrow \text{TRP 2}$ and $\text{UE 2} \rightarrow \text{TRP 1}$ (plus multipath delay spread) must stay strictly below **~2.3 μs** (equivalent to ~700 meters path difference). Exceeding this causes Inter-Symbol Interference (ISI) exclusively inside PRBs 50–99.
 * **O-RAN 7.2x Fronthaul Section Handling (if testing O-DU)**
   * **Why it matters:** Over eCPRI fronthaul, Cell 1 sends U-Plane IQ data for PRBs 0–99 and Cell 2 sends PRBs 50–149. Ensure the VIAVI Fronthaul Tester / RU Emulator properly aligns `startPrbc` and `numPrbc` fields in eCPRI Section Type 1 packets so the O-DU equalizer aligns PRB 50 of Cell 1 with PRB 50 of Cell 2 in the same symbol buffer.
+
+---
+
+## 6. PRB Overlap Across Cells: Spectrum View
+
+The PRBs are frequency positions on the **same carrier**. In the example below, both UEs transmit in the same slot, and PRBs 4–7 are assigned to both UEs. Each TRP therefore receives both signals on those PRBs; the centralized receiver uses channel estimates and DMRS to separate them.
+
+```text
+                         SAME CARRIER - SAME SLOT
+Frequency increases  ----------------------------------------------------->
+
+PRB index             0   1   2   3  |  4   5   6   7  |  8   9  10  11
+                                      |<-- OVERLAP -->|
+UE 1 (served by Cell A) [UE1 UE1 UE1 UE1]|[UE1 UE1 UE1 UE1]|[ .   .   .   . ]
+UE 2 (served by Cell B) [ .   .   .   . ]|[UE2 UE2 UE2 UE2]|[UE2 UE2 UE2 UE2]
+                                      |  Both transmit   |
+                                      |  at same time    |
+
+TRP 1 and TRP 2 receive UE 1 + UE 2 on PRBs 4–7.
+They forward their received signals to the centralized BBU/O-DU for joint
+processing.
+```
