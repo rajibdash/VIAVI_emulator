@@ -4,7 +4,11 @@
 
 When testing **Uplink Coordinated Multi-Point (UL CoMP) Reception** (or Multi-TRP UL reception) with a **VIAVI UE Emulator** (such as the TM500 or E500), issues in a **Physical Resource Block (PRB) overlapping region** typically stem from synchronization mismatches, power control conflicts, DMRS (Demodulation Reference Signal) collisions, or fronthaul/channel model configuration errors.
 
-**Issue statement:** PUSCH decoding may degrade when cooperating TRPs jointly receive a UE's uplink transmission, especially when other UEs share its PRBs. Check pilot separation, timing, frequency/phase tracking, receive power, and IQ transport before attributing the failure to PRB overlap itself.
+**Reported issue:** The UE disconnect was observed in the **cooperating (Coop) cell selected for CoMP reception**, while that cell was forwarding received UL data to the **serving cell's L1 for demodulation**. This identifies the reported failure location and receive-data path; it does not establish that the VIAVI emulator caused the disconnect. Distinguish loss of a cooperating-cell UE context or receive branch from an actual UE RRC disconnect at its serving cell.
+
+For this deployment, trace the path as **UE UL transmission -> cooperating-cell reception -> UL data forwarding -> serving-cell L1 demodulation**. The centralized BBU/O-DU diagrams below illustrate general joint reception; they do not replace this reported topology. Confirm whether the forwarded data consists of IQ samples, frequency-domain symbols, or another implementation-specific format before applying transport checks.
+
+**Diagnostic scope:** PUSCH decoding may degrade when cooperating TRPs jointly receive a UE's uplink transmission, especially when other UEs share its PRBs. Check pilot separation, timing, frequency/phase tracking, receive power, and the actual UL forwarding interface before attributing the failure to PRB overlap itself.
 
 Distinguish **one UE's same PUSCH received at multiple TRPs** from **different UEs sharing PRBs**. The first requires each receiver to process the same transmitted DMRS configuration; the second additionally requires coordinated pilot separation and sufficient spatial separability. These scenarios may exhibit:
 
@@ -12,6 +16,20 @@ Distinguish **one UE's same PUSCH received at multiple TRPs** from **different U
 * **HARQ Retransmission Loops:** Excessive NACKs occur even when simulated path loss and SNR appear favorable.
 * **UL Throughput Degradation:** The scheduler falls back to conservative Modulation and Coding Schemes (MCS) or drops out of CoMP Joint Reception (JR) mode into non-CoMP single-TRP reception.
 * **DMRS Channel Estimation Errors:** Poor SINR reporting on the uplink DMRS, leading to inaccurate Interference Rejection Combining (IRC) or joint processing at the baseband unit (BBU/O-DU).
+
+### 1.1 VIAVI UE-Side Acceptance of 10% PRB Overlap
+
+**As reported for this test setup, 10% PRB overlap is accepted on the VIAVI UE-emulator side, independently of the gNB scheduler perspective.** This is a user-provided test condition, not a publicly verified VIAVI specification, a universal maximum, or a claim that overlap above 10% must fail.
+
+Keep **UE-side acceptance** separate from **gNB scheduling and reception correctness**: acceptance does not validate the scheduler's allocation/pairing policy, DMRS separation, cooperating-cell forwarding, or serving-cell L1 demodulation. Conversely, scheduler policy does not define the reported VIAVI acceptance condition. A disconnect at the accepted 10% condition still requires investigation along the reported receive-data path.
+
+Record how the test calculates the percentage: overlapping PRB count, denominator (for example, a UE allocation or the carrier/BWP PRB count), and common slot/symbol interval. These details were not supplied, so do not equate 10% of carrier bandwidth with 10% of a UE's allocation. The resource grids below are illustrative and do not represent the reported 10% condition.
+
+### 1.2 Public Web Research: Evidence and Limits
+
+Public web searches performed on **2026-11-13** covered VIAVI/Aeroflex TM500, UL CoMP, cooperating-cell UE disconnects, PRB overlap, and known issues/release notes. **No matching public defect report was found** confirming a VIAVI UE disconnect in the specific cooperating-cell-to-serving-L1 forwarding scenario. No public source was found establishing the reported **10% UE-side acceptance** condition either. Lack of a public match does not rule out a release-specific defect or a customer-only support advisory.
+
+Public TM500 product information and historical CoMP coverage are listed in Section 9 for capability context only; they do not establish this failure's cause, a fix, or an NR-specific guarantee. Direct page retrieval was unavailable during this review, so the web findings are limited to search-index evidence, not a review of customer-only release notes. The exact emulator model, software build, feature licenses, and VIAVI support confirmation remain necessary before calling this a known emulator defect.
 
 ---
 
@@ -39,6 +57,9 @@ Distinguish **one UE's same PUSCH received at multiple TRPs** from **different U
 
 ## 3. General Troubleshooting & Verification Checklist
 
+* **Locate the First Failure on the Reported CoMP Path:** Correlate VIAVI UE logs, cooperating-cell selection/context logs, UL forwarding records, and serving-cell L1 input/CRC/HARQ logs by timestamp, UE identity, serving/cooperating cell IDs, frame/slot, and HARQ process. Check for missing, late, duplicated, misrouted, or stale-context UL data. Identify whether cooperating-cell context removal, forwarding loss, or serving-L1 demodulation failure happens first; do not assume the visible disconnect is the initiating event.
+* **Verify the Disconnect Type and Reason:** Capture the actual serving-cell RRC release/re-establishment or radio-link-failure evidence, if present, separately from cooperating-branch removal or an emulator session stop. Record the release reason, relevant timers/counters, and any process errors before assigning responsibility to the UE emulator or gNB.
+* **Reproduce the Accepted 10% Condition:** Preserve the reported VIAVI UE-side overlap condition and record its percentage definition (Section 1.1). Compare serving-cell-only reception with cooperating-cell selection/forwarding enabled, holding grants, MCS, channel conditions, and power fixed where supported. Separate UE-side acceptance from forwarding integrity and serving-L1 decoding results.
 * **Verify Channel Model Delays:** Check the VIAVI embedded fading/channel emulator settings between the UE and each TRP. At each receive point, verify FFT-window placement and arrival-time/multipath spread against the CP budget (approximately 4.7 μs for ordinary normal-CP symbols at 15 kHz SCS, or proportionally shorter for 30 kHz SCS). Independently aligned TRPs need not have identical propagation delays.
 * **Inspect RRC & DCI Logs on the TM500/E500:**
   * Confirm that the UE is correctly parsing DCI Format 0_1 / 0_2 fields for **SRS Resource Indicator (SRI)** and **Antenna Ports / DMRS sequence initialization**.
@@ -244,6 +265,7 @@ Use the matrix below to map observed VIAVI TM500/E500 log counters and symptoms 
 
 | VIAVI Log Symptom / Counter | Likely Root Cause | Target 3GPP IE / Parameter | Corrective Action |
 | :--- | :--- | :--- | :--- |
+| **Reported UE disconnect in the cooperating cell selected for CoMP**, while forwarding UL data to serving-cell L1. | Cause unconfirmed: distinguish cooperating-context removal, UL forwarding failure, serving-L1 processing failure, and actual serving-cell UE disconnect. No matching public VIAVI defect report was found. | Implementation-specific CoMP context/forwarding identifiers, serving-L1 input records, and actual RRC release/RLF evidence | Correlate the first failure across the complete path using UE/cell IDs, frame/slot, and HARQ process. Reproduce at the reported accepted 10% UE-side overlap condition without treating it as scheduler validation. |
 | **PUSCH CRC Failure / High BLER** in allocations containing overlapping PRBs (e.g., PRBs 50–99), while a non-overlapping baseline passes. CRC is a transport-block result, not a per-PRB measurement. | Possible DMRS configuration mismatch, pilot/data collision, or insufficient spatial separation; different serving PCIs alone do not establish the cause. | `DMRS-UplinkConfig` (`scramblingID0`, `scramblingID1`), applicable DCI sequence initialization, and DMRS mapping | Match each UE's transmitted and expected sequence. Check shared-RE OCC compatibility or disjoint pilot REs protected from data; do not require a shared data-scrambling identity. |
 | **Low DMRS SINR / Channel Estimation Error** despite high simulated SNR and correctly applied identities. | Pilot collision or incompatible OCC/sequence mapping; a matching identity alone does not establish orthogonality. | `DCI Format 0_1` / `0_2` (`Antenna ports` and CDM groups without data) & `dmrs-Type` | For Type 1, use ports `0` and `2` in CDM groups 0 and 1 with both groups protected from data, or validate shared-RE OCC separation. |
 | **Inter-Symbol Interference (ISI) / Frequency-Dependent Phase Ramp** in 30 kHz SCS NR FR1 tests. | Incorrect receive timing can produce a phase ramp across subcarriers; exceeding the per-receiver CP budget can produce ISI/ICI. | VIAVI Channel Emulator Delay Profile, receiver FFT-window alignment & MAC `Timing Advance Command` | Check arrival-time spread and multipath at each TRP against its approximately 2.34 μs ordinary-symbol CP budget. Independently align receive windows; a phase ramp alone does not prove a CP violation. |
@@ -299,6 +321,9 @@ Do not infer CFO from a phase ramp across subcarriers alone: receive-timing erro
 
 ## 9. Technical References and Validation Scope
 
+* [VIAVI TM500 Network Tester](https://www.viavisolutions.com/en-us/products/tm500-network-tester): public product-capability context; not evidence of the reported disconnect or a 10% overlap threshold.
+* [Network tester gains LTE-A CoMP support (EDN)](https://www.edn.com/network-tester-gains-lte-a-comp-support/) and [TM500 Network Tester Enhances 4G User Experience (Design World)](https://www.designworldonline.com/tm500-network-tester-enhances-4g-user-experience/): historical TM500 LTE-A CoMP capability coverage surfaced by web search. These are not defect advisories or confirmation of the reported deployment's behavior; direct page retrieval was unavailable during the review.
+* [VIAVI Knowledge Base](https://www.viavisolutions.com/en-us/support/support-resources/knowledge-base): vendor support entry point for checking the exact model/build and requesting a matching defect/advisory or fixed release. Customer-only material was not reviewed. Include the CoMP topology, overlap calculation, first-failure trace, and reported 10% UE-side acceptance condition in a support request.
 * [3GPP TS 38.211 V18.4.0](https://www.etsi.org/deliver/etsi_ts/138200_138299/138211/18.04.00_60/ts_138211v180400p.pdf): clause 4.4.1 defines antenna ports; clause 6.3.1.1 covers PUSCH data scrambling; clause 6.4.1.1 covers PUSCH DMRS generation and mapping, including Type 1/2 port and CDM-group tables. Apply the clauses corresponding to the tested transform-precoding mode and release.
 * [NVIDIA Sionna PUSCH DMRS configuration](https://github.com/NVlabs/sionna/blob/main/src/sionna/phy/nr/pusch_dmrs_config.py): an independent implementation cross-check for PUSCH port numbering, Type 1 CDM groups (ports 0/1 in group 0, ports 2/3 in group 1), OCC weights, scrambling identities, and CDM groups without data. This is supporting implementation evidence, not a normative specification.
 * [An Analytical and Experimental Study of Distributed Uplink Beamforming in the Presence of Carrier Frequency Offsets](https://arxiv.org/abs/2508.08506): analytical and experimental evidence on distributed-receiver oscillator offsets, pilot-based channel/CFO measurements, and uplink SINR impact. This supports the receiver principles, not a specific VIAVI product feature or mandatory NR scheduler policy.
