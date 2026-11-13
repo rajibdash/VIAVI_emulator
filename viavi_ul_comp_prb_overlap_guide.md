@@ -1,10 +1,14 @@
 # VIAVI UE Emulator Issues & Architecture Guide: Uplink CoMP Reception in PRB Overlapping Regions
 
-## 1. Overview & Common Failure Symptoms
+## 1. Testing Overview & Common Failure Symptoms
 
-When testing **Uplink Coordinated Multi-Point (UL CoMP) Reception** (or Multi-TRP UL reception) with a **VIAVI UE Emulator** (such as the TM500 or E500), issues in a **Physical Resource Block (PRB) overlapping region** typically stem from synchronization mismatches, power control conflicts, DMRS (Demodulation Reference Signal) collisions, or fronthaul/channel model configuration errors.
+When testing **Uplink Coordinated Multi-Point (UL CoMP) Reception** (or Multi-TRP UL or PUSCH reception) with a **VIAVI UE Emulator** (such as the TM500 or E500), 
+issues in a **Physical Resource Block (PRB) overlapping region** among two cells(same bandwidth, frequency, numerology) typically stem from synchronization mismatches, 
+power control conflicts, DMRS (Demodulation Reference Signal) collisions, or fronthaul/channel model configuration errors.
 
-**Reported issue:** The UE disconnect was observed in the **cooperating (Coop) cell selected for CoMP reception**, while that cell was forwarding received UL data to the **serving cell's L1 for demodulation**. This identifies the reported failure location and receive-data path; it does not establish that the VIAVI emulator caused the disconnect. Distinguish loss of a cooperating-cell UE context or receive branch from an actual UE RRC disconnect at its serving cell.
+**Reported issue:** The UE disconnect was observed in the **cooperating (Coop) cell selected for CoMP reception**, while that cell was forwarding received UL data to the 
+**serving cell's L1 for demodulation**. This identifies the reported failure location and receive-data path; it does not establish that the VIAVI emulator caused the 
+disconnect. Distinguish loss of a cooperating-cell UE context or receive branch from an actual UE RRC disconnect at its serving cell.
 
 For this deployment, trace the path as **UE UL transmission -> cooperating-cell reception -> UL data forwarding -> serving-cell L1 demodulation**. The centralized BBU/O-DU diagrams below illustrate general joint reception; they do not replace this reported topology. Confirm whether the forwarded data consists of IQ samples, frequency-domain symbols, or another implementation-specific format before applying transport checks.
 
