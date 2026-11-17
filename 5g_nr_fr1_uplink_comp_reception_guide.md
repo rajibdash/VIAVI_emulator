@@ -1,4 +1,4 @@
-# 5G NR FR1 Uplink CoMP Reception: A Standalone Guide
+# 5G NR FR1 Uplink CoMP Reception: A Standalone Guide for familiarisation about the feature only...
 
 This guide explains how coordinated multi-point (CoMP) uplink reception works in 5G NR FR1, how it differs from other multi-TRP techniques, and what the UE, TRPs, and receiver need to do. It is an original explanation with self-contained diagrams; the diagrams are embedded below rather than linked to external image files.
 
@@ -265,7 +265,6 @@ The benefit should be measured against a controlled single-TRP baseline. Useful 
 
 ## 12. References and further reading
 
-* [ShareTechnote: 5G CoMP](https://www.sharetechnote.com/html/5G/5G_CoMP.html) — further reading on CoMP concepts. This document does not reproduce its text or illustrations.
 * [3GPP TS 38.300, NR and NG-RAN overall description](https://www.3gpp.org/dynareport/38300.htm) — architecture and overall NR/NG-RAN description.
 * [3GPP TS 38.211, NR physical channels and modulation](https://www.3gpp.org/dynareport/38211.htm) — physical signals/channels, resource mapping, and reference signals.
 * [3GPP TS 38.213, NR physical layer procedures for control](https://www.3gpp.org/dynareport/38213.htm) and [TS 38.214, NR physical layer procedures for data](https://www.3gpp.org/dynareport/38214.htm) — procedures related to physical-layer control and data.
